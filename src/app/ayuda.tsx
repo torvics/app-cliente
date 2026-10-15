@@ -3,9 +3,14 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+import { useAuth } from '@/context/auth-context';
+
+
 export default function CentroAyuda() {
   const router = useRouter();
   const [motivoSeleccionado, setMotivoSeleccionado] = useState('no_llegado');
+  const { usuario } = useAuth();
+
 
   const opcionesReporte = [
     { id: 'no_llegado', titulo: 'Mi paquete no ha llegado', icono: 'package-variant-closed' },
@@ -13,14 +18,31 @@ export default function CentroAyuda() {
     { id: 'danado', titulo: 'El paquete llegó dañado', icono: 'package-variant' },
   ];
 
+  if (!usuario) {
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: '#F5F8FA' }}>
+      <Feather name="lock" size={48} color="#5B7290" />
+      <Text style={{ fontSize: 16, color: '#0B2B5B', textAlign: 'center', marginVertical: 16 }}>
+        Inicia sesión para enviar un reporte sobre tu pedido.
+      </Text>
+      <TouchableOpacity
+        style={{ backgroundColor: '#18529D', borderRadius: 14, height: 52, paddingHorizontal: 24, justifyContent: 'center' }}
+        onPress={() => router.push('/login')}>
+        <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 16 }}>Iniciar sesión</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView 
-        style={styles.flexContainer} 
+      <KeyboardAvoidingView
+        style={styles.flexContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-          
+
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -39,16 +61,16 @@ export default function CentroAyuda() {
             {opcionesReporte.map((opcion) => {
               const isSelected = motivoSeleccionado === opcion.id;
               return (
-                <TouchableOpacity 
+                <TouchableOpacity
                   key={opcion.id}
                   style={[styles.card, isSelected && styles.cardSelected]}
                   onPress={() => setMotivoSeleccionado(opcion.id)}
                 >
                   <View style={[styles.iconContainer, isSelected && styles.iconContainerSelected]}>
-                    <MaterialCommunityIcons 
-                      name={opcion.icono as any} 
-                      size={24} 
-                      color={isSelected ? '#FFFFFF' : '#18529D'} 
+                    <MaterialCommunityIcons
+                      name={opcion.icono as any}
+                      size={24}
+                      color={isSelected ? '#FFFFFF' : '#18529D'}
                     />
                   </View>
                   <Text style={styles.cardText}>{opcion.titulo}</Text>
@@ -59,7 +81,7 @@ export default function CentroAyuda() {
 
           {/* Formulario de Detalles */}
           <Text style={styles.formLabel}>Detalles del problema</Text>
-          
+
           <TextInput
             style={styles.textInput}
             placeholder="Describe tu problema en detalle..."

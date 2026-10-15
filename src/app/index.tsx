@@ -2,12 +2,18 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Modal, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
+import { NotificacionesModal, useNotificaciones } from '@/components/notificaciones-modal';
+import { useAuth } from '@/context/auth-context';
+
+
 import { useRouter } from 'expo-router';
 
 export default function DashboardCliente() {
-  
   const router = useRouter();
-  const [menuVisible, setMenuVisible] = useState(false); 
+  const { usuario } = useAuth();
+  const { notificaciones, hayNoLeidas, marcarLeida, marcarTodas } = useNotificaciones();
+  const [notifVisible, setNotifVisible] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const enviosRecientes = [
     { id: '1', folio: '#PKT-8492', desc: 'Paquete mediano · 2.4 kg', estado: 'En tránsito', tipo: 'transito' },
@@ -18,23 +24,32 @@ export default function DashboardCliente() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        
+
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => setMenuVisible(true)}>
             <Feather name="menu" size={24} color="#0B2B5B" />
           </TouchableOpacity>
-          
+
           <View style={styles.logoContainer}>
             <MaterialCommunityIcons name="truck-fast" size={28} color="#18529D" />
             <Text style={styles.logoText}>Rumbo<Text style={styles.logoTextLight}>Envíos</Text></Text>
           </View>
-          
-          <TouchableOpacity>
-            <View style={styles.notificationDot} />
-            <Feather name="bell" size={24} color="#0B2B5B" />
-          </TouchableOpacity>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => setNotifVisible(true)} style={{ padding: 4 }}>
+              {hayNoLeidas && (
+                <View style={{ position: 'absolute', right: 4, top: 4, width: 8, height: 8, borderRadius: 4, backgroundColor: '#E53935', zIndex: 1 }} />
+              )}
+              <Feather name="bell" size={22} color="#0B2B5B" />
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => router.push('/login')} style={{ padding: 4, marginLeft: 8 }}>
+              <Feather name={usuario ? 'user-check' : 'user'} size={22} color="#0B2B5B" />
+            </TouchableOpacity>
+          </View>
         </View>
+        {/* ↑ aquí se cierra el header */}
 
         {/* Saludo */}
         <View style={styles.greetingContainer}>
@@ -49,16 +64,16 @@ export default function DashboardCliente() {
             <Text style={styles.trackingHeaderText}>RASTREO EN TIEMPO REAL</Text>
           </View>
           <Text style={styles.trackingTitle}>Rastrea tu envío</Text>
-          
+
           <View style={styles.inputContainer}>
             <Feather name="search" size={20} color="#18529D" style={styles.inputIcon} />
-            <TextInput 
+            <TextInput
               style={styles.input}
               placeholder="Ingresa tu folio o código de rastreo"
               placeholderTextColor="#9AA6B8"
             />
           </View>
-          
+
           <TouchableOpacity style={styles.trackButton}>
             <Feather name="search" size={20} color="#18529D" />
             <Text style={styles.trackButtonText}>Rastrear Paquete</Text>
@@ -73,10 +88,9 @@ export default function DashboardCliente() {
           </TouchableOpacity>
         </View>
 
-        {/* Lista de Envíos */}
         {enviosRecientes.map((envio) => (
-          <TouchableOpacity 
-            key={envio.id} 
+          <TouchableOpacity
+            key={envio.id}
             style={styles.shipmentCard}
             onPress={() => {
               if (envio.folio === '#PKT-8492') {
@@ -84,38 +98,32 @@ export default function DashboardCliente() {
               }
             }}
           >
-            <View style={[
-              styles.iconContainer, 
-              envio.tipo === 'transito' ? styles.iconTransito : styles.iconEntregado
-            ]}>
-              <MaterialCommunityIcons 
-                name={envio.tipo === 'transito' ? "truck-outline" : "package-variant-closed"} 
-                size={24} 
-                color={envio.tipo === 'transito' ? "#18529D" : "#2E7D32"} 
+            <View style={[styles.iconContainer, envio.tipo === 'transito' ? styles.iconTransito : styles.iconEntregado]}>
+              <MaterialCommunityIcons
+                name={envio.tipo === 'transito' ? 'truck-outline' : 'package-variant-closed'}
+                size={24}
+                color={envio.tipo === 'transito' ? '#18529D' : '#2E7D32'}
               />
             </View>
-            
+
             <View style={styles.shipmentInfo}>
               <Text style={styles.shipmentFolio}>Folio {envio.folio}</Text>
               <Text style={styles.shipmentDesc}>{envio.desc}</Text>
             </View>
-            
+
             <View style={styles.shipmentAction}>
-              <View style={[
-                styles.badge, 
-                envio.tipo === 'transito' ? styles.badgeTransito : styles.badgeEntregado
-              ]}>
-                <Text style={[
-                  styles.badgeText,
-                  envio.tipo === 'transito' ? styles.badgeTextTransito : styles.badgeTextEntregado
-                ]}>{envio.estado}</Text>
+              <View style={[styles.badge, envio.tipo === 'transito' ? styles.badgeTransito : styles.badgeEntregado]}>
+                <Text style={[styles.badgeText, envio.tipo === 'transito' ? styles.badgeTextTransito : styles.badgeTextEntregado]}>
+                  {envio.estado}
+                </Text>
               </View>
               <Feather name="chevron-right" size={20} color="#C4C4C4" style={{ marginTop: 8 }} />
             </View>
           </TouchableOpacity>
         ))}
+      </ScrollView>
 
-        {/* Menú Lateral (Modal) */}
+      {/* Menú Lateral (Modal) */}
       <Modal
         visible={menuVisible}
         transparent={true}
@@ -124,7 +132,6 @@ export default function DashboardCliente() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.sideMenu}>
-            
             <View style={styles.menuProfileSection}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>JC</Text>
@@ -138,19 +145,13 @@ export default function DashboardCliente() {
                 <Feather name="home" size={22} color="#0B2B5B" />
                 <Text style={styles.menuItemText}>Inicio</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity style={styles.menuItem} onPress={() => {
-                setMenuVisible(false);
-                router.push('/detalles');
-              }}>
+
+              <TouchableOpacity style={styles.menuItem} onPress={() => { setMenuVisible(false); router.push('/detalles'); }}>
                 <Feather name="package" size={22} color="#0B2B5B" />
                 <Text style={styles.menuItemText}>Mis Envíos</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.menuItem} onPress={() => {
-                setMenuVisible(false);
-                router.push('/ayuda');
-              }}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => { setMenuVisible(false); router.push('/ayuda'); }}>
                 <Feather name="help-circle" size={22} color="#0B2B5B" />
                 <Text style={styles.menuItemText}>Centro de Ayuda</Text>
               </TouchableOpacity>
@@ -160,15 +161,19 @@ export default function DashboardCliente() {
               <Feather name="log-out" size={22} color="#E53935" />
               <Text style={styles.logoutText}>Cerrar Sesión</Text>
             </TouchableOpacity>
-            
           </View>
-          
-          {/* Área oscura para cerrar el menú al tocar fuera de él */}
+
           <TouchableOpacity style={styles.closeOverlayArea} onPress={() => setMenuVisible(false)} activeOpacity={1} />
         </View>
       </Modal>
 
-      </ScrollView>
+      <NotificacionesModal
+        visible={notifVisible}
+        onClose={() => setNotifVisible(false)}
+        notificaciones={notificaciones}
+        onMarcarLeida={marcarLeida}
+        onMarcarTodas={marcarTodas}
+      />
     </SafeAreaView>
   );
 }
