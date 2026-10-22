@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 
 export default function DashboardCliente() {
   const router = useRouter();
-  const { usuario } = useAuth();
+  const { usuario, estaAutenticado, logout } = useAuth();
   const { notificaciones, hayNoLeidas, marcarLeida, marcarTodas } = useNotificaciones();
   const [notifVisible, setNotifVisible] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -53,8 +53,8 @@ export default function DashboardCliente() {
 
         {/* Saludo */}
         <View style={styles.greetingContainer}>
-          <Text style={styles.greetingText}>Hola,</Text>
-          <Text style={styles.nameText}>Ivan</Text>
+          <Text style={styles.profileName}>{usuario?.nombre ?? 'Invitado'}</Text>
+          <Text style={styles.profileType}>{estaAutenticado ? 'Cliente' : 'Sin sesión'}</Text>
         </View>
 
         {/* Tarjeta de Rastreo */}
@@ -157,9 +157,21 @@ export default function DashboardCliente() {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.logoutButton} onPress={() => setMenuVisible(false)}>
-              <Feather name="log-out" size={22} color="#E53935" />
-              <Text style={styles.logoutText}>Cerrar Sesión</Text>
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={async () => {
+                setMenuVisible(false);
+                if (estaAutenticado) {
+                  await logout();
+                } else {
+                  router.push('/login');
+                }
+              }}
+            >
+              <Feather name={estaAutenticado ? 'log-out' : 'log-in'} size={22} color="#18529D" />
+              <Text style={[styles.logoutText, { color: '#18529D' }]}>
+                {estaAutenticado ? 'Cerrar Sesión' : 'Iniciar Sesión'}
+              </Text>
             </TouchableOpacity>
           </View>
 

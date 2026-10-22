@@ -9,7 +9,7 @@ export default function RootLayout() {
         <Stack.Screen name="detalles" />
         <Stack.Screen name="rastreo" />
         <Stack.Screen name="ayuda" />
-        <Stack.Screen name="login" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="login" />
       </Stack>
     </AuthProvider>
   );

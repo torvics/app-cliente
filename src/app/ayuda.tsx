@@ -5,12 +5,19 @@ import { KeyboardAvoidingView, Platform, SafeAreaView, ScrollView, StatusBar, St
 
 import { useAuth } from '@/context/auth-context';
 
+import { useEffect } from 'react';
+
 
 export default function CentroAyuda() {
   const router = useRouter();
   const [motivoSeleccionado, setMotivoSeleccionado] = useState('no_llegado');
   const { usuario } = useAuth();
 
+  const { estaAutenticado } = useAuth();
+
+  useEffect(() => {
+    if (!estaAutenticado) router.replace('/login');
+  }, [estaAutenticado]);
 
   const opcionesReporte = [
     { id: 'no_llegado', titulo: 'Mi paquete no ha llegado', icono: 'package-variant-closed' },
@@ -19,20 +26,20 @@ export default function CentroAyuda() {
   ];
 
   if (!usuario) {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: '#F5F8FA' }}>
-      <Feather name="lock" size={48} color="#5B7290" />
-      <Text style={{ fontSize: 16, color: '#0B2B5B', textAlign: 'center', marginVertical: 16 }}>
-        Inicia sesión para enviar un reporte sobre tu pedido.
-      </Text>
-      <TouchableOpacity
-        style={{ backgroundColor: '#18529D', borderRadius: 14, height: 52, paddingHorizontal: 24, justifyContent: 'center' }}
-        onPress={() => router.push('/login')}>
-        <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 16 }}>Iniciar sesión</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: '#F5F8FA' }}>
+        <Feather name="lock" size={48} color="#5B7290" />
+        <Text style={{ fontSize: 16, color: '#0B2B5B', textAlign: 'center', marginVertical: 16 }}>
+          Inicia sesión para enviar un reporte sobre tu pedido.
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: '#18529D', borderRadius: 14, height: 52, paddingHorizontal: 24, justifyContent: 'center' }}
+          onPress={() => router.push('/login')}>
+          <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 16 }}>Iniciar sesión</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
 
   return (
