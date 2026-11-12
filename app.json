@@ -32,6 +32,13 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Permite que la app use tu ubicación para mostrarte dónde están tus paquetes y la ruta hacia ellos.",
+          "locationWhenInUsePermission": "Permite que la app use tu ubicación para mostrarte dónde están tus paquetes y la ruta hacia ellos."
+        }
       ]
     ],
     "experiments": {

@@ -1,19 +1,38 @@
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Modal, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import { useRouter } from 'expo-router';
+
+import { useAuth } from '@/context/auth';
+import { usePaquetes } from '@/hooks/use-paquetes';
+
+const esEntregado = (estado: string) => estado.toLowerCase().includes('entregado');
+
+const iniciales = (nombre: string) =>
+  nombre
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join('') || 'C';
 
 export default function DashboardCliente() {
   
   const router = useRouter();
-  const [menuVisible, setMenuVisible] = useState(false); 
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [busqueda, setBusqueda] = useState('');
+  const { usuario, esInvitado, cerrarSesion } = useAuth();
+  const { paquetes, cargando, error, reintentar } = usePaquetes({ habilitado: !esInvitado });
 
-  const enviosRecientes = [
-    { id: '1', folio: '#PKT-8492', desc: 'Paquete mediano · 2.4 kg', estado: 'En tránsito', tipo: 'transito' },
-    { id: '2', folio: '#PKT-8377', desc: 'Sobre documentos · 0.1 kg', estado: 'Entregado', tipo: 'entregado' },
-    { id: '3', folio: '#PKT-8210', desc: 'Paquete grande · 6.1 kg', estado: 'Entregado', tipo: 'entregado' },
-  ];
+  const nombre = usuario?.nombre ?? (esInvitado ? 'Invitado' : 'Cliente');
+
+  const rastrear = () => {
+    const folio = busqueda.trim().replace(/^#/, '');
+    if (!folio) return;
+    setBusqueda('');
+    router.push({ pathname: '/rastrear', params: { folio } });
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -39,7 +58,7 @@ export default function DashboardCliente() {
         {/* Saludo */}
         <View style={styles.greetingContainer}>
           <Text style={styles.greetingText}>Hola,</Text>
-          <Text style={styles.nameText}>Ivan</Text>
+          <Text style={styles.nameText}>{nombre}</Text>
         </View>
 
         {/* Tarjeta de Rastreo */}
@@ -56,15 +75,32 @@ export default function DashboardCliente() {
               style={styles.input}
               placeholder="Ingresa tu folio o código de rastreo"
               placeholderTextColor="#9AA6B8"
+              autoCapitalize="characters"
+              value={busqueda}
+              onChangeText={setBusqueda}
+              onSubmitEditing={rastrear}
+              returnKeyType="search"
             />
           </View>
           
-          <TouchableOpacity style={styles.trackButton}>
+          <TouchableOpacity style={styles.trackButton} onPress={rastrear}>
             <Feather name="search" size={20} color="#18529D" />
             <Text style={styles.trackButtonText}>Rastrear Paquete</Text>
           </TouchableOpacity>
         </View>
 
+        {/* Invitado: sin lista de envíos */}
+        {esInvitado && (
+          <View style={styles.estadoCard}>
+            <MaterialCommunityIcons name="account-circle-outline" size={36} color="#18529D" />
+            <Text style={styles.estadoText}>Inicia sesión para ver todos tus envíos.</Text>
+            <TouchableOpacity onPress={cerrarSesion}>
+              <Text style={styles.seeAllText}>Iniciar sesión</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!esInvitado && (<>
         {/* Envíos Recientes */}
         <View style={styles.recentHeader}>
           <Text style={styles.recentTitle}>Envíos Recientes</Text>
@@ -74,46 +110,65 @@ export default function DashboardCliente() {
         </View>
 
         {/* Lista de Envíos */}
-        {enviosRecientes.map((envio) => (
+        {cargando && <ActivityIndicator color="#18529D" style={{ marginVertical: 24 }} />}
+
+        {!cargando && error && (
+          <View style={styles.estadoCard}>
+            <Text style={styles.estadoText}>No se pudieron cargar tus envíos.</Text>
+            <TouchableOpacity onPress={reintentar}>
+              <Text style={styles.seeAllText}>Reintentar</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!cargando && !error && paquetes.length === 0 && (
+          <View style={styles.estadoCard}>
+            <Text style={styles.estadoText}>Aún no tienes envíos registrados.</Text>
+          </View>
+        )}
+
+        {!cargando && !error && paquetes.map((paquete) => {
+          const entregado = esEntregado(paquete.estadoActual);
+          const etiquetas = [paquete.esPrioritario && 'Prioritario', paquete.esFragil && 'Frágil'].filter(Boolean);
+          return (
           <TouchableOpacity 
-            key={envio.id} 
+            key={paquete.idPaquete} 
             style={styles.shipmentCard}
-            onPress={() => {
-              if (envio.folio === '#PKT-8492') {
-                router.push('/detalles');
-              }
-            }}
+            onPress={() => router.push({ pathname: '/detalles', params: { folio: paquete.folio } })}
           >
             <View style={[
               styles.iconContainer, 
-              envio.tipo === 'transito' ? styles.iconTransito : styles.iconEntregado
+              entregado ? styles.iconEntregado : styles.iconTransito
             ]}>
               <MaterialCommunityIcons 
-                name={envio.tipo === 'transito' ? "truck-outline" : "package-variant-closed"} 
+                name={entregado ? "package-variant-closed" : "truck-outline"} 
                 size={24} 
-                color={envio.tipo === 'transito' ? "#18529D" : "#2E7D32"} 
+                color={entregado ? "#2E7D32" : "#18529D"} 
               />
             </View>
             
             <View style={styles.shipmentInfo}>
-              <Text style={styles.shipmentFolio}>Folio {envio.folio}</Text>
-              <Text style={styles.shipmentDesc}>{envio.desc}</Text>
+              <Text style={styles.shipmentFolio}>Folio #{paquete.folio}</Text>
+              <Text style={styles.shipmentDesc} numberOfLines={1}>{paquete.direccionDestino}</Text>
+              {etiquetas.length > 0 && <Text style={styles.shipmentTags}>{etiquetas.join(' · ')}</Text>}
             </View>
             
             <View style={styles.shipmentAction}>
               <View style={[
                 styles.badge, 
-                envio.tipo === 'transito' ? styles.badgeTransito : styles.badgeEntregado
+                entregado ? styles.badgeEntregado : styles.badgeTransito
               ]}>
                 <Text style={[
                   styles.badgeText,
-                  envio.tipo === 'transito' ? styles.badgeTextTransito : styles.badgeTextEntregado
-                ]}>{envio.estado}</Text>
+                  entregado ? styles.badgeTextEntregado : styles.badgeTextTransito
+                ]}>{paquete.estadoActual}</Text>
               </View>
               <Feather name="chevron-right" size={20} color="#C4C4C4" style={{ marginTop: 8 }} />
             </View>
           </TouchableOpacity>
-        ))}
+          );
+        })}
+        </>)}
 
         {/* Menú Lateral (Modal) */}
       <Modal
@@ -127,10 +182,10 @@ export default function DashboardCliente() {
             
             <View style={styles.menuProfileSection}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>JC</Text>
+                <Text style={styles.avatarText}>{iniciales(nombre)}</Text>
               </View>
-              <Text style={styles.profileName}>Juan Carlos Perea</Text>
-              <Text style={styles.profileType}>Cliente Estándar</Text>
+              <Text style={styles.profileName}>{nombre}</Text>
+              <Text style={styles.profileType}>{usuario?.email || (esInvitado ? 'Sin cuenta' : 'Cliente')}</Text>
             </View>
 
             <View style={styles.menuLinks}>
@@ -139,12 +194,19 @@ export default function DashboardCliente() {
                 <Text style={styles.menuItemText}>Inicio</Text>
               </TouchableOpacity>
               
+              {!esInvitado && (
+                <TouchableOpacity style={styles.menuItem} onPress={() => setMenuVisible(false)}>
+                  <Feather name="package" size={22} color="#0B2B5B" />
+                  <Text style={styles.menuItemText}>Mis Envíos</Text>
+                </TouchableOpacity>
+              )}
+
               <TouchableOpacity style={styles.menuItem} onPress={() => {
                 setMenuVisible(false);
-                router.push('/detalles');
+                router.push('/rastrear');
               }}>
-                <Feather name="package" size={22} color="#0B2B5B" />
-                <Text style={styles.menuItemText}>Mis Envíos</Text>
+                <Feather name="map" size={22} color="#0B2B5B" />
+                <Text style={styles.menuItemText}>Rastrear en mapa</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.menuItem} onPress={() => {
@@ -156,9 +218,21 @@ export default function DashboardCliente() {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.logoutButton} onPress={() => setMenuVisible(false)}>
-              <Feather name="log-out" size={22} color="#E53935" />
-              <Text style={styles.logoutText}>Cerrar Sesión</Text>
+            <TouchableOpacity style={styles.logoutButton} onPress={() => {
+              setMenuVisible(false);
+              cerrarSesion();
+            }}>
+              {esInvitado ? (
+                <>
+                  <Feather name="log-in" size={22} color="#18529D" />
+                  <Text style={[styles.logoutText, styles.loginText]}>Iniciar Sesión</Text>
+                </>
+              ) : (
+                <>
+                  <Feather name="log-out" size={22} color="#E53935" />
+                  <Text style={styles.logoutText}>Cerrar Sesión</Text>
+                </>
+              )}
             </TouchableOpacity>
             
           </View>
@@ -341,6 +415,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#7A8B9E',
   },
+  shipmentTags: {
+    fontSize: 12,
+    color: '#F5A623',
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  estadoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    gap: 8,
+  },
+  estadoText: {
+    fontSize: 14,
+    color: '#5B7290',
+  },
   shipmentAction: {
     alignItems: 'flex-end',
   },
@@ -430,6 +521,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 16,
+  },
+  loginText: {
+    color: '#18529D',
   },
   logoutText: {
     fontSize: 16,

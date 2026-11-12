@@ -1,146 +1,226 @@
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ActivityIndicator, Platform, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+import { usePaquetes } from '@/hooks/use-paquetes';
+
+type PasoEstado = 'completado' | 'actual' | 'pendiente';
+
+// Etapas genéricas del envío; la etapa actual se deriva de `estadoActual`
+const ETAPAS = [
+  { id: 1, titulo: 'Recibido en centro de distribución', icono: 'warehouse' },
+  { id: 2, titulo: 'En camino a entrega', icono: 'truck-outline' },
+  { id: 3, titulo: 'Entregado', icono: 'home-outline' },
+] as const;
+
+const indiceEtapa = (estado: string) => {
+  const e = estado.toLowerCase();
+  if (e.includes('entregado')) return ETAPAS.length; // todas completadas
+  if (e.includes('ruta') || e.includes('camino') || e.includes('tránsito') || e.includes('transito')) return 1;
+  return 0;
+};
 
 export default function DetallesEnvio() {
   const router = useRouter();
+  const { folio } = useLocalSearchParams<{ folio?: string }>();
+  const { cargando, error, reintentar, getPaqueteByFolio } = usePaquetes();
+  const paquete = getPaqueteByFolio(folio);
 
-  const historial = [
-    { 
-      id: 1, 
-      titulo: 'Recibido en centro de distribución local', 
-      subtitulo: 'Hoy · 08:12 h', 
-      icono: 'warehouse', 
-      colorFondo: '#2E7D32', 
-      colorTexto: '#0B2B5B',
-      estado: 'completado' 
-    },
-    { 
-      id: 2, 
-      titulo: 'Paquete clasificado y en ruta', 
-      subtitulo: 'Hoy · 09:45 h', 
-      icono: 'package-variant-closed', 
-      colorFondo: '#2E7D32', 
-      colorTexto: '#0B2B5B',
-      estado: 'completado' 
-    },
-    { 
-      id: 3, 
-      titulo: 'En camino a entrega', 
-      subtitulo: 'En curso · Unidad 07 asignada', 
-      icono: 'truck-outline', 
-      colorFondo: '#18529D', 
-      colorTexto: '#18529D',
-      estado: 'actual' 
-    },
-    { 
-      id: 4, 
-      titulo: 'Entregado', 
-      subtitulo: 'Pendiente', 
-      icono: 'home-outline', 
-      colorFondo: '#F0F2F5', 
-      colorTexto: '#9AA6B8',
-      tituloColor: '#9AA6B8',
-      estado: 'pendiente' 
-    },
-  ];
+  const header = (
+    <View style={styles.header}>
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Feather name="arrow-left" size={24} color="#0B2B5B" />
+      </TouchableOpacity>
+      <Text style={styles.headerTitle}>Detalles del Envío</Text>
+      <View style={{ width: 24 }} />
+    </View>
+  );
+
+  if (cargando || error || !paquete) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>{header}</View>
+        <View style={styles.estadoContainer}>
+          {cargando ? (
+            <ActivityIndicator size="large" color="#18529D" />
+          ) : error ? (
+            <>
+              <Feather name="wifi-off" size={40} color="#E53935" />
+              <Text style={styles.estadoText}>No se pudo cargar la información del envío.</Text>
+              <TouchableOpacity onPress={reintentar}>
+                <Text style={styles.reintentarText}>Reintentar</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <MaterialCommunityIcons name="package-variant-remove" size={48} color="#9AA6B8" />
+              <Text style={styles.estadoText}>Paquete no encontrado</Text>
+              {folio ? <Text style={styles.estadoSubText}>No hay un envío con el folio {folio}.</Text> : null}
+            </>
+          )}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const actual = indiceEtapa(paquete.estadoActual);
+  const entregado = actual >= ETAPAS.length;
+  const historial = ETAPAS.map((etapa, i) => {
+    const estado: PasoEstado = i < actual ? 'completado' : i === actual ? 'actual' : 'pendiente';
+    return { ...etapa, estado };
+  });
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.scrollFlex} contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Feather name="arrow-left" size={24} color="#0B2B5B" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Detalles del Envío</Text>
-          <View style={{ width: 24 }} />
-        </View>
+
+        {header}
 
         {/* Tarjeta Principal Azul */}
         <View style={styles.mainCard}>
           <View style={styles.cardHeader}>
-            <Text style={styles.folioText}>#PKT-8492</Text>
+            <Text style={styles.folioText}>#{paquete.folio}</Text>
             <View style={styles.badgeActivo}>
-              <View style={styles.dotActivo} />
-              <Text style={styles.badgeActivoText}>Activo</Text>
+              <View style={[styles.dotActivo, entregado && styles.dotFinalizado]} />
+              <Text style={styles.badgeActivoText}>{entregado ? 'Finalizado' : 'Activo'}</Text>
             </View>
           </View>
-          
+
           <Text style={styles.labelSmall}>ESTADO</Text>
-          <Text style={styles.statusText}>En camino a entrega</Text>
-          
+          <Text style={styles.statusText}>{paquete.estadoActual}</Text>
+
           <View style={styles.divider} />
-          
-          <View style={styles.cardFooter}>
-            <View>
-              <Text style={styles.labelSmall}>LLEGADA ESTIMADA</Text>
-              <Text style={styles.infoText}>12 min</Text>
+
+          <Text style={styles.labelSmall}>DESTINO</Text>
+          <Text style={styles.infoText}>{paquete.direccionDestino}</Text>
+
+          {(paquete.esPrioritario || paquete.esFragil) && (
+            <View style={styles.tagsRow}>
+              {paquete.esPrioritario && (
+                <View style={styles.tag}>
+                  <Feather name="zap" size={12} color="#FFFFFF" />
+                  <Text style={styles.tagText}>Prioritario</Text>
+                </View>
+              )}
+              {paquete.esFragil && (
+                <View style={styles.tag}>
+                  <MaterialCommunityIcons name="glass-fragile" size={12} color="#FFFFFF" />
+                  <Text style={styles.tagText}>Frágil</Text>
+                </View>
+              )}
             </View>
-            <View>
-              <Text style={styles.labelSmall}>TRANSPORTISTA</Text>
-              <Text style={styles.infoText}>Unidad 07</Text>
-            </View>
-          </View>
+          )}
         </View>
 
-        {/* Historial del Envío */}
-        <Text style={styles.sectionTitle}>Historial del envío</Text>
+        {/* Progreso del Envío */}
+        <Text style={styles.sectionTitle}>Progreso del envío</Text>
 
         <View style={styles.timelineContainer}>
-          {historial.map((item, index) => (
-            <View key={item.id} style={styles.timelineItem}>
-              
-              <View style={styles.timelineLeft}>
-                <View style={[styles.iconCircle, { backgroundColor: item.colorFondo }]}>
-                  <MaterialCommunityIcons 
-                    name={item.icono as any} 
-                    size={22} 
-                    color={item.estado === 'pendiente' ? '#9AA6B8' : '#FFFFFF'} 
-                  />
+          {historial.map((item, index) => {
+            const colorFondo =
+              item.estado === 'completado' ? '#2E7D32' : item.estado === 'actual' ? '#18529D' : '#F0F2F5';
+            const colorTexto =
+              item.estado === 'actual' ? '#18529D' : item.estado === 'pendiente' ? '#9AA6B8' : '#0B2B5B';
+            return (
+              <View key={item.id} style={styles.timelineItem}>
+                <View style={styles.timelineLeft}>
+                  <View style={[styles.iconCircle, { backgroundColor: colorFondo }]}>
+                    <MaterialCommunityIcons
+                      name={item.icono}
+                      size={22}
+                      color={item.estado === 'pendiente' ? '#9AA6B8' : '#FFFFFF'}
+                    />
+                  </View>
+                  {index !== historial.length - 1 && (
+                    <View
+                      style={[
+                        styles.timelineLine,
+                        { backgroundColor: item.estado === 'completado' ? '#2E7D32' : '#E6EDF5' },
+                      ]}
+                    />
+                  )}
                 </View>
-                {index !== historial.length - 1 && (
-                  <View style={[
-                    styles.timelineLine, 
-                    { backgroundColor: item.estado === 'completado' ? '#2E7D32' : '#E6EDF5' }
-                  ]} />
-                )}
-              </View>
 
-              <View style={styles.timelineRight}>
-                <Text style={[
-                  styles.timelineTitle, 
-                  item.tituloColor ? { color: item.tituloColor } : {}
-                ]}>
-                  {item.titulo}
-                </Text>
-                <Text style={[styles.timelineSubtitle, { color: item.colorTexto }]}>
-                  {item.subtitulo}
-                </Text>
+                <View style={styles.timelineRight}>
+                  <Text style={[styles.timelineTitle, item.estado === 'pendiente' && styles.textoPendiente]}>
+                    {item.titulo}
+                  </Text>
+                  <Text style={[styles.timelineSubtitle, { color: colorTexto }]}>
+                    {item.estado === 'completado' ? 'Completado' : item.estado === 'actual' ? 'En curso' : 'Pendiente'}
+                  </Text>
+                </View>
               </View>
-              
-            </View>
-          ))}
+            );
+          })}
         </View>
 
       </ScrollView>
 
       {/* Botón Inferior */}
-      <View style={styles.footerContainer}>
-        <TouchableOpacity 
-          style={styles.mapButton}
-          onPress={() => router.push('/rastreo')}
-        >
-          <Feather name="map-pin" size={20} color="#FFFFFF" style={styles.mapIcon} />
-          <Text style={styles.mapButtonText}>Ver en Mapa</Text>
-        </TouchableOpacity>
-      </View>
+      {!entregado && (
+        <View style={styles.footerContainer}>
+          <TouchableOpacity
+            style={styles.mapButton}
+            onPress={() => router.push({ pathname: '/mapa', params: { folio: paquete.folio } })}
+          >
+            <Feather name="map-pin" size={20} color="#FFFFFF" style={styles.mapIcon} />
+            <Text style={styles.mapButtonText}>Ver en mapa</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  dotFinalizado: {
+    backgroundColor: '#90B4E2',
+  },
+  textoPendiente: {
+    color: '#9AA6B8',
+  },
+  tagsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 16,
+  },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#356BB0',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  tagText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  estadoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+    gap: 12,
+  },
+  estadoText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0B2B5B',
+    textAlign: 'center',
+  },
+  estadoSubText: {
+    fontSize: 14,
+    color: '#7A8B9E',
+    textAlign: 'center',
+  },
+  reintentarText: {
+    fontSize: 15,
+    color: '#18529D',
+    fontWeight: '600',
+  },
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',
