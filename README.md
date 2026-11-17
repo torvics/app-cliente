@@ -1,4 +1,4 @@
-# App Cliente - Plataforma de Envíos
+# PaqTracker - App Cliente
 
 Aplicación móvil desarrollada para la gestión y seguimiento de paquetes desde la perspectiva del cliente. Permite visualizar el historial de envíos, monitorear entregas en tiempo real y gestionar reportes de incidencias.
 

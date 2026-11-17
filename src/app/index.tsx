@@ -4,6 +4,7 @@ import { ActivityIndicator, Modal, Platform, SafeAreaView, ScrollView, StatusBar
 
 import { useRouter } from 'expo-router';
 
+import { Marca } from '@/components/marca';
 import { useAuth } from '@/context/auth';
 import { usePaquetes } from '@/hooks/use-paquetes';
 
@@ -45,8 +46,7 @@ export default function DashboardCliente() {
           </TouchableOpacity>
           
           <View style={styles.logoContainer}>
-            <MaterialCommunityIcons name="truck-fast" size={28} color="#18529D" />
-            <Text style={styles.logoText}>Rumbo<Text style={styles.logoTextLight}>Envíos</Text></Text>
+            <Marca tamano={30} />
           </View>
           
           <TouchableOpacity>
@@ -266,15 +266,6 @@ const styles = StyleSheet.create({
   logoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  logoText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#0B2B5B',
-    marginLeft: 8,
-  },
-  logoTextLight: {
-    fontWeight: '400',
   },
   notificationDot: {
     position: 'absolute',

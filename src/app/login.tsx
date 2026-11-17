@@ -1,4 +1,4 @@
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,6 +14,7 @@ import {
   View,
 } from 'react-native';
 
+import { Marca } from '@/components/marca';
 import { useAuth } from '@/context/auth';
 
 export default function Login() {
@@ -48,10 +49,7 @@ export default function Login() {
       >
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
           <View style={styles.logoContainer}>
-            <MaterialCommunityIcons name="truck-fast" size={40} color="#18529D" />
-            <Text style={styles.logoText}>
-              Rumbo<Text style={styles.logoTextLight}>Envíos</Text>
-            </Text>
+            <Marca tamano={48} />
           </View>
 
           <Text style={styles.title}>Inicia sesión</Text>
@@ -141,8 +139,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 40,
   },
-  logoText: { fontSize: 28, fontWeight: 'bold', color: '#0B2B5B', marginLeft: 10 },
-  logoTextLight: { fontWeight: '400' },
   title: { fontSize: 26, fontWeight: 'bold', color: '#0B2B5B', marginBottom: 6 },
   subtitle: { fontSize: 15, color: '#5B7290', marginBottom: 32 },
   label: { fontSize: 13, fontWeight: '600', color: '#0B2B5B', marginBottom: 8 },
